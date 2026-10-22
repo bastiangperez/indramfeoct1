@@ -1,6 +1,8 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { ProductoEvent } from '@models';
+import { Store } from '@ngrx/store';
 import { BehaviorSubject, Observable, ReplaySubject, Subject } from 'rxjs';
+import * as CartActions from '../../state/cart.actions';
 
 
 const STORAGE_KEY = "carrito_productos";
@@ -20,6 +22,9 @@ export class CommunicationService {
 
   //lista mutabla/reactiva de productos
   producto$:Observable<ProductoEvent[]>;
+
+  //inyectamos el Store para poder disparar la acción
+  store:Store= inject(Store);
 
   constructor() {
 
@@ -64,6 +69,9 @@ export class CommunicationService {
 
     //guardamos localmente
     this.persistir();
+
+    //lanzamos la acción al módulo de NgRX
+    this.store.dispatch(CartActions.agregarProducto({producto:productoEvent}));
   }
 
   persistir ()
@@ -79,5 +87,18 @@ export class CommunicationService {
     //reset lista de productos RAM
     this.productoAddedSubject.next([]);
 
+  }
+
+  eliminarProducto(id:number)
+  {
+    const listaActual = this.productoAddedSubject.value;
+    const nuevaLista = listaActual.filter(p => p.id !== id);
+    this.productoAddedSubject.next(nuevaLista);
+
+    // Persistencia local
+    this.persistir();
+
+    // NgRx: acción para eliminar del store
+    this.store.dispatch(CartActions.eliminarProducto({ id }));
   }
 }
